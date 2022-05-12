@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sMAP Stream Status</title>
+    <link href="/media/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="/media/smap/css/vquery.css" rel="stylesheet" media="screen">
+    <link href="/media/smap/css/status.css" rel="stylesheet" media="screen">
+    <link href="/media/smap/css/statchart.css" rel="stylesheet" media="screen">
+    <link rel="stylesheet" type="text/css" href="//ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/css/jquery.dataTables.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-migrate/1.1.1/jquery-migrate.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.0.1/d3.v3.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/datatables/1.9.4/jquery.dataTables.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>
+    <script src="/media/smap/js/vquery.js"></script>
+
+  </head>
+
+  <body>
+
+    <div class="main">
+      <div class="left">
+        <div id="vquery"></div>
+        <div id='stream-div' style="height: 90%; overflow: auto; margin-top:10px;"></div>
+      </div> 
+
+      <div class="right">
+        <div id="statchart" style="margin-bottom:10px;"></div>
+        <pre id="metadata" style="overflow: auto;"></pre>
+      </div>
+    </div>
+
+    <script>
+      var enum_id = 1;
+      var url = "/backend/api/query";
+
+      function genStreamTable(data){
+        var html, row = '';
+        data.forEach(function(d){
+          try{
+            var _date = new Date(d.Readings[0][0]);
+            var _reading = d.Readings[0][1].toFixed(2);
+          }catch(err){}
+          row = "<tr class='stream-row' data-uuid='" + d.uuid + "'>";
+          row += "<td class='path'>" + d.Path + "</td>";
+          row += "<td class='reading'>" + _reading + "</td>";
+          row += "<td class='timestamp'>" + _date + "</td>";
+          row += "</tr>";
+          html += row; 
+        });
+        return html;
+      }
+
+      function convertJSON(data){
+        var json = []
+        for (i in data){
+          var el = data[i];
+          json.push({"timestamp": el[0], "reading": el[1]});
+        }
+        return json;
+      }
+
+      function renderStreamChart(data){
+        var data_json = convertJSON(data.Readings);
+
+        var margin = {top: 20, right: 20, bottom: 20, left: 50},
+            width = 560 - margin.left - margin.right,
+            height = 300 - margin.top - margin.bottom;
+
+        var x = d3.time.scale()
+            .range([0, width]);
+
+        var y = d3.scale.linear()
+            .range([height, 0]);
+
+        var xAxis = d3.svg.axis()
+            .scale(x)
+            .orient("bottom");
+
+        var yAxis = d3.svg.axis()
+            .scale(y)
+            .orient("left");
+
+        var line = d3.svg.line()
+            .x(function(d) { return x(d.timestamp); })
+            .y(function(d) { return y(d.reading); });
+
+        var svg = d3.select("#statchart").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+         
+         x.domain(d3.extent(data_json, function(d) { return d.timestamp; }));
+         y.domain(d3.extent(data_json, function(d) { return d.reading; }));
+
+         svg.append("g")
+             .attr("class", "x axis")
+             .attr("transform", "translate(0," + height + ")")
+             .call(xAxis);
+           
+         svg.append("g")
+             .attr("class", "y axis")
+             .call(yAxis)
+           .append("text")
+             .attr("class", "unit-text")
+             .attr("transform", "rotate(-90)") 
+             .attr("y", 6)
+             .attr("dy", ".71em")
+             .style("text-anchor", "end")
+             
+         svg.append("path")
+             .datum(data_json)
+             .attr("class","line")
+             .attr("d", line);          
+      }
+      
+      function renderStreamMetadata(uuid){
+        var query = "select * where uuid='" + uuid + "'";
+        $.ajax({
+          url: url,
+          type: "post",
+          data: query,
+          success: function(res){
+            var m = res[0]
+            $('#metadata').empty();
+            if (!$.isEmptyObject(m)) {
+              m = JSON.stringify(m, null, 4);
+              $('#metadata').html(m);
+            }
+          }
+        });
+      }
+  
+      function getStreamData(uuid){
+        var query = "select data before now limit 1000 where uuid='" + uuid + "'";
+        $.ajax({
+          url: url,
+          type: "post",
+          data: query,
+          success: function(data){
+            var d = data[0];
+            var readings = d.Readings;
+            var uuid = d.uuid
+            var last = readings.pop();
+            $('#statchart').empty();
+            renderStreamChart(d);
+            renderStreamMetadata(uuid);
+          }
+        });
+      }
+      
+      var vqCallback = function(data){
+        var html = genStreamTable(data);
+        var viewportHeight = $(window).height();
+        var vqueryHeight = $('#vquery').outerHeight();
+        $('#stream-div').height(viewportHeight-vqueryHeight-20);
+        $('#datatable').remove();
+        $('#stream-div').append(' \
+          <table id="datatable" class="table table-compact table-bordered"> \
+            <thead> \
+              <tr> \
+                <th>Path</th> \
+                <th>current value</th> \
+                <th>local time</th> \
+              </tr> \
+            </thead> \
+          <tbody id="streams"></tbody> \
+          </table>');
+        $('#streams').html(html);
+        var dtable = $('#datatable').dataTable({
+          "bProcessing": true,
+          "bFilter": false,
+          "bPaginate": false
+        });
+        $('#datatable_info').remove();
+        $('.stream-row').mouseover(function(){
+          var uuid = $(this).data("uuid");
+          getStreamData(uuid);
+        });
+      }
+      
+      new VQuery(url, vqCallback);
+     
+    </script>
+  </body>
+</html>
+

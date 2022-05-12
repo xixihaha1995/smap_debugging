@@ -1,0 +1,37 @@
+
+Building and running the readingdb server
+=========================================
+
+Build this project using automake as usual:
+
+$ ./configure
+$ make
+$ sudo make install
+
+This installs the `reading-server` binary.  By default, it places the
+database volumes in /var/lib/readingdb.  You can change it using an
+option to `configure`, or by passing a command-line argument.
+
+The install process also installs a monit script in /etc/monit/conf.d
+which can be used to start and stop the server if you have monit
+installed; a `monit start readingdb` will work.
+
+reading-server will attempt to drop to a "readingdb" user when
+started; this is convenient since monit often runs as root.  If you
+want this to happen, you'll need to create this user (for instance, by
+doing `adduser --system readingdb`) if you are not using the binary
+package.  You'll have to make sure that the data directory is readable
+and writable by this user if you do this.
+
+Building and installing the python bindings
+===========================================
+
+In order to connect to the database, you'll need the python libraries.
+They must be installed separately:
+
+$ cd iface_bin
+$ sudo make install
+
+This will build and install the python bindings in your system-wide
+python install.
+

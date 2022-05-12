@@ -1,0 +1,29 @@
+readingdb (0.7.3-precise1) precise; urgency=low
+
+  * Add support for only computing certain sketces
+
+ -- Stephen Dawson-Haggerty <steve@buildingrobotics.com>  Fri, 13 Nov 2015 16:54:23 -0800
+
+readingdb (0.7.2-1) precise; urgency=low
+
+  * Add support for IPv4-only environments
+
+ -- Stephen Dawson-Haggerty <steve@buildingrobotics.com>  Mon, 27 Oct 2014 15:40:00 -0700
+
+readingdb (0.7.1-1) precise; urgency=low
+
+  * Add support for fetching substream sketches in db_prev/db_next
+
+ -- Stephen Dawson-Haggerty <steve@buildingrobotics.com>  Thu, 09 Oct 2014 01:07:00 +0200
+
+readingdb (0.7.0-1) precise; urgency=low
+
+  * Add support for sketching 
+
+ -- Stephen Dawson-Haggerty <steve@buildingrobotics.com>  Sat, 04 Oct 2014 17:22:19 +0200
+
+readingdb (0.6.0-4) precise; urgency=low
+
+  * Initial release. 
+
+ -- Stephen Dawson-Haggerty <stevedh@EECS.Berkeley.EDU>  Thu, 17 May 2012 15:52:32 -0700
